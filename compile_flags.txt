@@ -1,0 +1,3 @@
+-xc
+-std=c17
+-DTB_OPT_ATTR_W=32
