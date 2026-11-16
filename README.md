@@ -6,6 +6,7 @@ A home for small terminal utilities. Built for [iSH](https://ish.app)
 ## Tools
 
 - `try`: scratch pad for trying out ideas.
+- `reader FILE`: pager for text files; `n` and `p` turn pages, `q` quits.
 
 ## Build
 

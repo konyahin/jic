@@ -1,6 +1,6 @@
 # A tool is src/NAME.c including termbox2.h, then prelude.c. Add NAME to TOOLS.
 
-TOOLS   = try
+TOOLS   = try reader
 
 CC      ?= cc
 WARNS   = -std=c17 -Wall -Wextra -Wconversion -Wdouble-promotion \
