@@ -3,12 +3,18 @@
 A home for small terminal utilities. Built for [iSH](https://ish.app)
 (Alpine Linux, i686) on iPhone, runs on any POSIX terminal.
 
-## Layout
+## Tools
+
+- `try`: scratch pad for trying out ideas.
+
+## Build
 
 ```
-src/prelude.c       arena, Str, Out, slices, hash trie
-src/NAME.c          one tool = one unity translation unit
-vendor/termbox2.h   termbox2 2.7.0, patched, built once into its own object
+make            # build/NAME
+make debug      # build/debug/NAME, UBSan traps at the faulting line
+make test       # prelude self-test with a fuzz loop, ITERS=n
+make cross      # build/i686/NAME, static musl via zig
+make deploy     # cross, then copy to DEST (iCloud logs/bin)
 ```
 
 The vendored termbox2 is patched: `tb_print_ex` no longer returns
@@ -26,16 +32,6 @@ if (!cellbuf_in_bounds(&global.back, x, y)) {
 A tool is `src/NAME.c`: it includes `vendor/termbox2.h`, then `prelude.c`,
 and defines its own `main`, which sets up the arenas it needs. Add `NAME` to
 `TOOLS` in the Makefile.
-
-## Build
-
-```
-make            # build/NAME
-make debug      # build/debug/NAME, UBSan traps at the faulting line
-make test       # prelude self-test with a fuzz loop, ITERS=n
-make cross      # build/i686/NAME, static musl via zig
-make deploy     # cross, then copy to DEST (iCloud logs/bin)
-```
 
 ## License
 
