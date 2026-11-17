@@ -21,18 +21,23 @@ typedef struct {
     ptrdiff_t  cap;
 } Pages;
 
-// Splits s after n codepoints
-static Cut take(Str s, ptrdiff_t n)
+// Splits s into a row of at most n codepoints, breaking at the last space
+// so words stay whole. A word longer than n is cut mid-word.
+static Cut wrap(Str s, ptrdiff_t n)
 {
     Cut r = {0};
     if (!s.len) return r;
-    ptrdiff_t i = 0;
+    ptrdiff_t i = 0, space = 0;
     for (ptrdiff_t cps = 0; i < s.len; i++) {
-        if (((unsigned char)s.data[i] & 0xc0) != 0x80 && cps++ == n) break;
+        unsigned char c = (unsigned char)s.data[i];
+        if ((c & 0xc0) != 0x80 && cps++ == n) break;
+        if (c == ' ' && i) space = i;  // a break at 0 would leave the row empty
     }
-    r.head = span(s.data, s.data+i);
-    r.tail = span(s.data+i, s.data+s.len);
-    r.ok   = i < s.len;
+    ptrdiff_t end = i;
+    if (i < s.len && s.data[i] != ' ' && space) end = space;
+    r.head = span(s.data, s.data+end);
+    r.tail = trimleft(span(s.data+end, s.data+s.len));
+    r.ok   = r.tail.len > 0;
     return r;
 }
 
@@ -49,7 +54,7 @@ static Str layout(Str text, int32_t x, int32_t y, int32_t width, int32_t rows,
         Cut part = {0};
         part.tail = line.head;
         do {  // an empty line still takes a row
-            part = take(part.tail, width);
+            part = wrap(part.tail, width);
             if (draw) {
                 tb_printf(x, y, TB_DEFAULT, TB_DEFAULT, "%.*s",
                           (int)part.head.len, part.head.data);
