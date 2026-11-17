@@ -81,6 +81,21 @@ static Pages paginate(Str text, int32_t width, int32_t rows, Arena *perm)
     return pages;
 }
 
+// Index of the page holding byte offset at.
+static ptrdiff_t locate(Pages pages, ptrdiff_t at)
+{
+    ptrdiff_t lo = 0, hi = pages.len;  // the first page starts at 0
+    while (hi - lo > 1) {
+        ptrdiff_t mid = lo + (hi - lo)/2;
+        if (pages.data[mid] <= at) {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    return lo;
+}
+
 static void render(Str text, Pages pages, State state)
 {
     assert(state.page >= 0 && state.page < pages.len);
@@ -142,20 +157,35 @@ int main(int argc, char **argv)
     int32_t r = tb_init();
     if (r != TB_OK) return fail(&err, (Str){0}, (char *)tb_strerror(r));
 
-    state.width = tb_width() - 2*state.padding;
-    state.rows  = tb_height() - 2*state.padding;
-    Pages pages = paginate(file.data, state.width, state.rows, &book);
+    // The rest of book goes to the page index, rebuilt on every resize.
+    Arena pagemem = book;
+    book.beg = book.end;
+
+    Pages     pages    = {0};
+    ptrdiff_t anchor   = 0;  // byte offset being read, kept across resizes
+    _Bool     relayout = 1;
 
     for (;;) {
+        if (relayout) {
+            Arena tmp   = pagemem;
+            state.width = tb_width() - 2*state.padding;
+            state.rows  = tb_height() - 2*state.padding;
+            pages       = paginate(file.data, state.width, state.rows, &tmp);
+            state.page  = locate(pages, anchor);
+            relayout    = 0;
+        }
         render(file.data, pages, state);
         struct tb_event ev = {0};
         r = tb_poll_event(&ev);
         if (r == TB_ERR_POLL && tb_last_errno() == EINTR) continue;
         if (r != TB_OK) break;
+        if (ev.type == TB_EVENT_RESIZE) relayout = 1;
         if (ev.type != TB_EVENT_KEY) continue;
         if (ev.ch == 'q') break;
+        ptrdiff_t was = state.page;
         if (ev.ch == 'n' && state.page < pages.len - 1) state.page++;
         if (ev.ch == 'p' && state.page > 0) state.page--;
+        if (state.page != was) anchor = pages.data[state.page];
     }
 
     tb_shutdown();
